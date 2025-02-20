@@ -14,7 +14,14 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('Congratulations, your extension "vscode-session-manager" is now active!');
 
     const disposable = vscode.commands.registerCommand('vscode-session-manager.saveSession', async () => {
-        const sessionName = await vscode.window.showInputBox({ prompt: 'Enter a name for this session' });
+        // Get current git branch name
+        // const gitBranch = await vscode.commands.executeCommand<string>('git.branch');
+
+        // get current timestamp
+        const timestamp = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+
+        // const defaultSessionName = gitBranch ? `Session - ${gitBranch}` : `session${randomString}`;
+        const sessionName = await vscode.window.showInputBox({ prompt: 'Enter a name for this session', value: `${timestamp}` });
         if (!sessionName) {
             vscode.window.showWarningMessage('Session name is required!');
             return;
