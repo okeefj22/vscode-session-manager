@@ -1,26 +1,73 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "vscode-session-manager" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('vscode-session-manager.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from VSCode Session Manager!');
-	});
-
-	context.subscriptions.push(disposable);
+interface TabState {
+    uri: string;
+    viewColumn?: number;
 }
 
-// This method is called when your extension is deactivated
+interface SessionState {
+    tabs: TabState[];
+}
+
+export function activate(context: vscode.ExtensionContext) {
+    console.log('Congratulations, your extension "vscode-session-manager" is now active!');
+
+    const disposable = vscode.commands.registerCommand('vscode-session-manager.saveSession', async () => {
+        // Save the current state
+        const state: SessionState = {
+            tabs: vscode.window.tabGroups.all.flatMap(group => 
+                group.tabs
+                    .filter(tab => tab.input instanceof vscode.TabInputText)
+                    .map(tab => {
+                        return {
+                            uri: (tab.input as vscode.TabInputText).uri.toString(),
+                            viewColumn: group.viewColumn
+                        };
+                    })
+                    
+            )
+        };
+        
+        // Save state to workspace storage
+        await context.workspaceState.update('savedSession', state);
+        
+        // Close all tabs in all groups
+        await Promise.all(
+            vscode.window.tabGroups.all.map(async (tabGroup) => {
+                await Promise.all(
+                    tabGroup.tabs.map(async (tab) => {
+                        await vscode.window.tabGroups.close(tab);
+                    })
+                );
+            })
+        );
+
+        vscode.window.showInformationMessage('Session saved!');
+    });
+
+    const disposable2 = vscode.commands.registerCommand('vscode-session-manager.restoreSession', async () => {
+        const savedState = context.workspaceState.get<SessionState>('savedSession');
+        
+        if (!savedState) {
+            vscode.window.showWarningMessage('No saved session found!');
+            return;
+        }
+
+        // Restore tabs
+        await Promise.all(
+            savedState.tabs.map(async (tabState) => {
+                const uri = vscode.Uri.parse(tabState.uri);
+                await vscode.window.showTextDocument(uri, {
+                    viewColumn: tabState.viewColumn,
+                    preview: false
+                });
+            })
+        );
+
+        vscode.window.showInformationMessage('Session restored!');
+    });
+
+    context.subscriptions.push(disposable, disposable2);
+}
+
 export function deactivate() {}

@@ -14,8 +14,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "vscode-session-manager.helloWorld",
-        "title": "Hello World"
+        "command": "vscode-session-manager.saveSession",
+        "title": "Save Session"
+      },
+      {
+        "command": "vscode-session-manager.restoreSession",
+        "title": "Restore Session"
       }
     ]
   },
